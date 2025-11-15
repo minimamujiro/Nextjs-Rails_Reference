@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,8 +21,12 @@ export default function LoginPage() {
     try {
       await login(email, password);
       router.push('/admin');
-    } catch (err: any) {
-      setError(err.message || 'ログインに失敗しました');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'ログインに失敗しました');
+      } else {
+        setError('ログインに失敗しました');
+      }
     } finally {
       setLoading(false);
     }
@@ -77,9 +82,9 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-4 text-center">
-          <a href="/" className="text-blue-500 hover:underline">
+          <Link href="/" className="text-blue-500 hover:underline">
             ホームに戻る
-          </a>
+          </Link>
         </div>
       </div>
     </div>

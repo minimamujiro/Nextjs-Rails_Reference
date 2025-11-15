@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { apiClient } from '../../lib/api';
 import type { Video } from '../../lib/types';
 import Link from 'next/link';
 
 export default function VideoDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const [video, setVideo] = useState<Video | null>(null);
   const [loading, setLoading] = useState(true);
 

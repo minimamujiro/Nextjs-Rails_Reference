@@ -28,5 +28,10 @@ module Backend
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # Enable cookies/session support for API-only mode so we can store JWTs in HttpOnly cookies.
+    config.middleware.use ActionDispatch::Cookies
+    config.middleware.use ActionDispatch::Session::CookieStore, key: "_backend_session"
+    config.action_dispatch.cookies_same_site_protection = :lax
   end
 end

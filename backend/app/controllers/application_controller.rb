@@ -1,6 +1,7 @@
 class ApplicationController < ActionController::API
+  include ActionController::Cookies
   include JwtAuthenticable
-  
+
   rescue_from StandardError, with: :handle_error
 
   private

@@ -26,6 +26,14 @@ export default function HomePage() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Failed to logout', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -55,7 +63,7 @@ export default function HomePage() {
                     </Link>
                   )}
                   <button
-                    onClick={logout}
+                    onClick={handleLogout}
                     className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                   >
                     ログアウト

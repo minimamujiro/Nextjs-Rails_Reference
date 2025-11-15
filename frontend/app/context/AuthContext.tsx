@@ -8,27 +8,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    if (storedToken) {
-      setToken(storedToken);
-      apiClient.setToken(storedToken);
-    }
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await apiClient.getCurrentUser();
+        setUser(response.user);
+      } catch {
+        setUser(null);
+      } finally {
+        setInitializing(false);
+      }
+    };
+
+    fetchCurrentUser();
   }, []);
 
   const login = async (email: string, password: string) => {
     const response = await apiClient.login(email, password);
-    setToken(response.token);
     setUser(response.user);
-    apiClient.setToken(response.token);
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    apiClient.setToken(null);
+  const logout = async () => {
+    try {
+      await apiClient.logout();
+    } finally {
+      setUser(null);
+    }
   };
 
   const isAdmin = () => {
@@ -36,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, initializing, login, logout, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

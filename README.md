@@ -47,6 +47,9 @@ bundle install
 rails db:create
 rails db:migrate
 rails db:seed  # 管理者アカウントの作成
+# 必要に応じて環境変数を設定
+# export FRONTEND_ORIGIN=http://localhost:3001
+# export COOKIE_DOMAIN=localhost  # 本番では実際のドメインを指定
 rails server
 ```
 
@@ -109,6 +112,14 @@ npm run dev
 - 管理画面（`http://localhost:3001/admin`）で動画の投稿・編集・削除が可能です
 - 一般ユーザーは動画の閲覧のみが可能です
 
+## 認証とセッション管理
+
+- 管理者ログイン成功時に、JWTが **HttpOnlyクッキー** としてブラウザに保存されます
+- クッキーはフロントエンドから参照できないため、XSS耐性が向上します
+- アプリ起動時に `GET /api/auth/me` を呼び出してログイン状態を復元します
+- ログアウト時はクッキーを削除してセッションを破棄します
+- CORSは `FRONTEND_ORIGIN` 環境変数（デフォルト: `http://localhost:3001`）で許可元を制御し、`credentials: true` でクッキー送信を許可しています
+
 ## データベース設計
 
 ### Users (管理者テーブル)
@@ -134,6 +145,7 @@ npm run dev
 ### 認証
 - POST /api/auth/login
 - POST /api/auth/logout
+- GET /api/auth/me
 
 ### 動画
 - GET /api/videos (一覧取得)

@@ -12,7 +12,7 @@ module JwtAuthenticable
   end
 
   def current_user
-    token = request.headers['Authorization']&.split(' ')&.last
+    token = auth_token
     return nil unless token
 
     decoded = decode_token(token)
@@ -25,6 +25,16 @@ module JwtAuthenticable
     unless current_user&.admin?
       render json: { error: 'Unauthorized' }, status: :unauthorized
     end
+  end
+
+  private
+
+  def auth_token
+    cookies.signed[:auth_token] || authorization_header_token
+  end
+
+  def authorization_header_token
+    request.headers['Authorization']&.split(' ')&.last
   end
 end
 

@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../lib/api';
 import type { Video } from '../lib/types';
 
 export default function AdminPage() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, initializing } = useAuth();
   const router = useRouter();
   const [videos, setVideos] = useState<Video[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -20,14 +20,7 @@ export default function AdminPage() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user && !isAdmin()) {
-      router.push('/');
-    }
-    fetchVideos();
-  }, [user]);
-
-  const fetchVideos = async () => {
+  const fetchVideos = useCallback(async () => {
     try {
       const data = await apiClient.getVideos();
       setVideos(data);
@@ -36,11 +29,26 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleLogout = () => {
-    logout();
-    router.push('/');
+  useEffect(() => {
+    if (initializing) return;
+
+    if (!user || user.role !== 'admin') {
+      router.push('/login');
+      return;
+    }
+
+    fetchVideos();
+  }, [user, initializing, fetchVideos, router]);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Failed to logout', error);
+    }
   };
 
   const openModal = (video?: Video) => {

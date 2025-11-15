@@ -5,12 +5,15 @@
 
 # Read more: https://github.com/cyu/rack-cors
 
+frontend_origin = ENV.fetch("FRONTEND_ORIGIN", "http://localhost:3003")
+
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    origins "*"
-    
+    origins frontend_origin
+
     resource "*",
       headers: :any,
-      methods: [:get, :post, :put, :patch, :delete, :options, :head]
+      methods: [:get, :post, :put, :patch, :delete, :options, :head],
+      credentials: true
   end
 end

@@ -1,79 +1,67 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+import type { LoginResponse, User, Video } from "./types";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api/v1";
 
 class ApiClient {
-  private baseUrl: string;
-  private token: string | null = null;
-
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
-    this.loadToken();
-  }
-
-  setToken(token: string | null) {
-    this.token = token;
-    if (token) {
-      localStorage.setItem('auth_token', token);
-    } else {
-      localStorage.removeItem('auth_token');
-    }
-  }
-
-  private loadToken() {
-    if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('auth_token');
-    }
-  }
+  constructor(private baseUrl: string) {}
 
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
-
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
-
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      credentials: "include",
       ...options,
-      headers,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
     });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error || 'An error occurred');
+    if (response.status === 204) {
+      return null as T;
     }
 
-    return response.json();
+    const isJson = response.headers
+      .get("content-type")
+      ?.includes("application/json");
+    const data = isJson ? await response.json().catch(() => null) : null;
+
+    if (!response.ok) {
+      const errorMessage =
+        (data as { error?: string } | null)?.error || "An error occurred";
+      throw new Error(errorMessage);
+    }
+
+    return data as T;
   }
 
   // Auth endpoints
   async login(email: string, password: string) {
-    return this.request<{
-      token: string;
-      user: { id: number; email: string; role: string };
-    }>('/auth/login', {
-      method: 'POST',
+    return this.request<LoginResponse>("/auth/login", {
+      method: "POST",
       body: JSON.stringify({ email, password }),
     });
   }
 
   async logout() {
-    return this.request('/auth/logout', {
-      method: 'POST',
+    await this.request<null>("/auth/logout", {
+      method: "POST",
     });
+  }
+
+  async getCurrentUser() {
+    return this.request<{ user: User }>("/auth/me");
   }
 
   // Video endpoints
   async getVideos() {
-    return this.request<any[]>('/videos');
+    return this.request<Video[]>("/videos");
   }
 
   async getVideo(id: number) {
-    return this.request<any>(`/videos/${id}`);
+    return this.request<Video>(`/videos/${id}`);
   }
 
   async createVideo(data: {
@@ -82,8 +70,8 @@ class ApiClient {
     video_url: string;
     thumbnail_url: string;
   }) {
-    return this.request<any>('/videos', {
-      method: 'POST',
+    return this.request<Video>("/videos", {
+      method: "POST",
       body: JSON.stringify({ video: data }),
     });
   }
@@ -97,15 +85,15 @@ class ApiClient {
       thumbnail_url?: string;
     }
   ) {
-    return this.request<any>(`/videos/${id}`, {
-      method: 'PATCH',
+    return this.request<Video>(`/videos/${id}`, {
+      method: "PATCH",
       body: JSON.stringify({ video: data }),
     });
   }
 
   async deleteVideo(id: number) {
-    return this.request(`/videos/${id}`, {
-      method: 'DELETE',
+    await this.request<null>(`/videos/${id}`, {
+      method: "DELETE",
     });
   }
 }
