@@ -47,9 +47,14 @@ bundle install
 rails db:create
 rails db:migrate
 rails db:seed  # 管理者アカウントの作成
-# 必要に応じて環境変数を設定
+# 必要な環境変数
 # export FRONTEND_ORIGIN=http://localhost:3001
 # export COOKIE_DOMAIN=localhost  # 本番では実際のドメインを指定
+# export AWS_S3_BUCKET=your-bucket-name
+# export AWS_REGION=ap-northeast-1
+# export AWS_ACCESS_KEY_ID=xxxxxxxx
+# export AWS_SECRET_ACCESS_KEY=xxxxxxxx
+# export AWS_CLOUDFRONT_URL=https://cdn.example.com   # 任意（CloudFrontを利用する場合）
 rails server
 ```
 
@@ -107,10 +112,12 @@ npm run dev
    - Email: `admin@example.com`
    - Password: `password123`
 
-### 4. 動画の管理
+### 4. 動画の管理（S3アップロード）
 
-- 管理画面（`http://localhost:3001/admin`）で動画の投稿・編集・削除が可能です
-- 一般ユーザーは動画の閲覧のみが可能です
+- 管理画面（`http://localhost:3001/admin`）から動画ファイル（mp4 等）とサムネイル画像をアップロードします
+- フロントエンド → Rails → AWS S3 の順で **プリサインドURL** を発行し、ブラウザから直接 S3 に PUT します
+- アップロード後に得られた S3/CloudFront の URL を `Video` レコードの `video_url / thumbnail_url` として保存します
+- 一般ユーザーは S3/CloudFront 上のファイルを参照して動画を閲覧します
 
 ## 認証とセッション管理
 
@@ -154,9 +161,13 @@ npm run dev
 - PATCH /api/videos/:id (更新 - 管理者のみ)
 - DELETE /api/videos/:id (削除 - 管理者のみ)
 
+### アップロード
+- POST /api/uploads/presign (S3のプリサインドURLを発行 - 管理者のみ)
+
 ## 注意事項
 
-- 動画ファイルは直接URLとして保存することを想定しています
-- 実際のプロダクション環境では、動画ファイルのアップロード機能を実装することを推奨します
-- CORS設定を適切に行ってください
+- AWS IAM のキーは **必ず .env や資格情報ストア** に安全に保存してください
+- `AWS_CLOUDFRONT_URL` を設定すると、返却されるファイルURLが CloudFront ドメインになります（未設定の場合は S3 の公開URL）
+- S3 バケットポリシーで `s3:PutObject` と `s3:GetObject` を許可する必要があります
+- CORS設定を適切に行ってください（`FRONTEND_ORIGIN` で制御）
 

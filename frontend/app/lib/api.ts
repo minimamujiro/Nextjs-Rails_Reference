@@ -1,8 +1,14 @@
-import type { LoginResponse, User, Video } from "./types";
+import type {
+  LoginResponse,
+  User,
+  Video,
+  PresignRequest,
+  PresignResponse,
+} from "./types";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002/api/v1";
-
+  console.log(API_BASE_URL)
 class ApiClient {
   constructor(private baseUrl: string) {}
 
@@ -94,6 +100,13 @@ class ApiClient {
   async deleteVideo(id: number) {
     await this.request<null>(`/videos/${id}`, {
       method: "DELETE",
+    });
+  }
+
+  async getPresignedUrl(payload: PresignRequest) {
+    return this.request<PresignResponse>("/uploads/presign", {
+      method: "POST",
+      body: JSON.stringify({ upload: payload }),
     });
   }
 }

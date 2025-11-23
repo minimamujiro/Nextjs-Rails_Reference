@@ -1,15 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import { apiClient } from './lib/api';
 import type { Video } from './lib/types';
 import Link from 'next/link';
+import { VideoCarousel } from './components/VideoCarousel';
 
 export default function HomePage() {
   const { user, logout, isAdmin } = useAuth();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const latestVideos = useMemo(() => videos.slice(0, 5), [videos]);
 
   useEffect(() => {
     fetchVideos();
@@ -83,6 +86,7 @@ export default function HomePage() {
       </nav>
 
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <VideoCarousel videos={latestVideos} />
         <h2 className="text-3xl font-bold mb-8">動画一覧</h2>
 
         {videos.length === 0 ? (

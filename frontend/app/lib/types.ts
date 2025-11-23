@@ -28,3 +28,16 @@ export interface AuthContextType {
   isAdmin: () => boolean;
 }
 
+export type UploadFileType = 'video' | 'thumbnail';
+
+export interface PresignRequest {
+  filename: string;
+  contentType: string;
+  fileType: UploadFileType;
+}
+
+export interface PresignResponse {
+  upload_url: string;
+  file_url: string;
+}
+

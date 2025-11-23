@@ -9,6 +9,7 @@ Rails.application.routes.draw do
       get 'auth/me', to: 'auth#me'
       
       resources :videos, only: [:index, :show, :create, :update, :destroy]
+      post 'uploads/presign', to: 'uploads#presign'
     end
   end
 end

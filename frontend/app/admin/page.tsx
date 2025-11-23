@@ -18,6 +18,9 @@ export default function AdminPage() {
     video_url: '',
     thumbnail_url: '',
   });
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchVideos = useCallback(async () => {
@@ -69,28 +72,78 @@ export default function AdminPage() {
         thumbnail_url: '',
       });
     }
+
+    setVideoFile(null);
+    setThumbnailFile(null);
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingVideo(null);
+    setVideoFile(null);
+    setThumbnailFile(null);
+    setIsSubmitting(false);
+  };
+
+  const uploadToS3 = async (file: File, fileType: 'video' | 'thumbnail') => {
+    const presign = await apiClient.getPresignedUrl({
+      filename: file.name,
+      contentType: file.type,
+      fileType,
+    });
+
+    const response = await fetch(presign.upload_url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': file.type,
+      },
+      body: file,
+    });
+
+    if (!response.ok) {
+      throw new Error('ファイルのアップロードに失敗しました');
+    }
+
+    return presign.file_url;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    setIsSubmitting(true);
     try {
+      const payload = { ...formData };
+
       if (editingVideo) {
-        await apiClient.updateVideo(editingVideo.id, formData);
+        if (videoFile) {
+          payload.video_url = await uploadToS3(videoFile, 'video');
+        }
+        if (thumbnailFile) {
+          payload.thumbnail_url = await uploadToS3(thumbnailFile, 'thumbnail');
+        }
       } else {
-        await apiClient.createVideo(formData);
+        if (!videoFile || !thumbnailFile) {
+          alert('動画ファイルとサムネイル画像を選択してください');
+          setIsSubmitting(false);
+          return;
+        }
+        payload.video_url = await uploadToS3(videoFile, 'video');
+        payload.thumbnail_url = await uploadToS3(thumbnailFile, 'thumbnail');
+      }
+
+      if (editingVideo) {
+        await apiClient.updateVideo(editingVideo.id, payload);
+      } else {
+        await apiClient.createVideo(payload);
       }
       fetchVideos();
       closeModal();
     } catch (error) {
       console.error('Error saving video:', error);
       alert('動画の保存に失敗しました');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -223,29 +276,64 @@ export default function AdminPage() {
               </div>
 
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2">動画URL</label>
+                <label className="block text-gray-700 mb-2">
+                  動画ファイル（mp4など）
+                </label>
+                {editingVideo && formData.video_url && !videoFile && (
+                  <p className="text-sm text-gray-500 mb-2 break-words">
+                    現在の動画URL:{' '}
+                    <a
+                      href={formData.video_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-500 underline"
+                    >
+                      {formData.video_url}
+                    </a>
+                  </p>
+                )}
                 <input
-                  type="url"
-                  value={formData.video_url}
-                  onChange={(e) =>
-                    setFormData({ ...formData, video_url: e.target.value })
-                  }
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
+                  required={!editingVideo}
+                  className="w-full"
                 />
+                {videoFile && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    選択中: {videoFile.name}
+                  </p>
+                )}
               </div>
 
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2">サムネイルURL</label>
+                <label className="block text-gray-700 mb-2">
+                  サムネイル画像
+                </label>
+                {editingVideo && formData.thumbnail_url && !thumbnailFile && (
+                  <div className="mb-2">
+                    <p className="text-sm text-gray-500">現在のサムネイル:</p>
+                    <img
+                      src={formData.thumbnail_url}
+                      alt="Current thumbnail"
+                      className="mt-2 h-32 object-cover rounded"
+                    />
+                  </div>
+                )}
                 <input
-                  type="url"
-                  value={formData.thumbnail_url}
+                  type="file"
+                  accept="image/*"
                   onChange={(e) =>
-                    setFormData({ ...formData, thumbnail_url: e.target.value })
+                    setThumbnailFile(e.target.files?.[0] ?? null)
                   }
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required={!editingVideo}
+                  className="w-full"
                 />
+                {thumbnailFile && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    選択中: {thumbnailFile.name}
+                  </p>
+                )}
               </div>
 
               <div className="flex justify-end space-x-4">
@@ -258,9 +346,14 @@ export default function AdminPage() {
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                  disabled={isSubmitting}
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
                 >
-                  {editingVideo ? '更新' : '作成'}
+                  {isSubmitting
+                    ? 'アップロード中...'
+                    : editingVideo
+                      ? '更新'
+                      : '作成'}
                 </button>
               </div>
             </form>
